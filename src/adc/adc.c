@@ -84,7 +84,7 @@ int adc_init(const struct device *dev) {
 	 * As this generates a _DONE and _RESULT event
 	 * the first result will be incorrect.
 	 */
-	NRF_SAADC_S->TASKS_CALIBRATEOFFSET = 1;
+	NRF_SAADC->TASKS_CALIBRATEOFFSET = 1;
     printk("adc setup.\n");
     return ret;
 }

@@ -54,7 +54,7 @@ void main(void) {
 	if (adc_init(adc_dev)) return;
 
 	// I2C setup
-	i2c_dev = DEVICE_DT_GET(DT_NODELABEL(i2c1));
+	i2c_dev = DEVICE_DT_GET(DT_NODELABEL(i2c0));
 	if (mpu6050_init(i2c_dev)) return;
 
 	if (bt_init()) return;
