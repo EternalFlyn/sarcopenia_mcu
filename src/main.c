@@ -7,6 +7,8 @@
 #include <zephyr.h>
 #include <device.h>
 #include <sys/printk.h>
+#include <devicetree.h>
+#include <drivers/gpio.h>
 
 #include "flyn_bluetooth.h"
 #include "adc.h"
@@ -23,6 +25,7 @@
 
 const struct device *adc_dev;
 const struct device *i2c_dev;
+const struct device *gpio0_dev;
 static struct mpu6050_data imu_data;
 
 void imu_sample_event() {
@@ -58,6 +61,10 @@ void main(void) {
 	if (mpu6050_init(i2c_dev)) return;
 
 	if (bt_init()) return;
+
+	gpio0_dev =  device_get_binding("GPIO_0");
+	gpio_pin_configure(gpio0_dev, 30, GPIO_OUTPUT);
+	gpio_pin_set(gpio0_dev, 30, 1);
 
 	adc_sample(adc_dev);
 }
