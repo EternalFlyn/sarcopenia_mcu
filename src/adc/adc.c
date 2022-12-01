@@ -9,7 +9,7 @@
 #include "adc.h"
 #include "adc_service.h"
 
-#define ADC_SAMPLE_TIME_MS 2
+#define ADC_SAMPLE_TIME_US 900
 
 #define EXTRA_SAMPLING 0
 #define CHANNEL_AMOUNT 2
@@ -61,7 +61,7 @@ static enum adc_action adc_callback(const struct device *dev,
 }
 
 const struct adc_sequence_options sequence_opts = {
-	.interval_us = ADC_SAMPLE_TIME_MS * 1000UL,
+	.interval_us = ADC_SAMPLE_TIME_US,
 	.callback = adc_callback,
 	.user_data = NULL,
 	.extra_samplings = EXTRA_SAMPLING,

@@ -30,6 +30,7 @@ static struct mpu6050_data imu_data;
 
 void imu_sample_event() {
 	int err = 0;
+	int cnt = 0;
 	while (true) {
 		err = mpu6050_sample(i2c_dev, &imu_data);
 		if (err) {

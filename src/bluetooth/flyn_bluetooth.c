@@ -44,9 +44,8 @@ static int bt_ready() {
 
 static struct bt_le_conn_param conn_param = {
 	// 15 ms to 15 ms
-	.interval_min = 12,
-	.interval_max = 12,
-	.latency = 1,
+	.interval_min = 6,
+	.interval_max = 6,
 	.timeout = 30
 };
 

@@ -5,7 +5,7 @@
 #include "adc_service.h"
 #include "adc_queue.h"
 
-#define DATA_AMOUNT_PER_PAGKAGE 100
+#define DATA_AMOUNT_PER_PAGKAGE 150
 
 K_QUEUE_DEFINE(EMG_LEFT);
 K_QUEUE_DEFINE(EMG_RIGHT);
