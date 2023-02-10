@@ -101,13 +101,14 @@ static const struct adc_channel_cfg adc6_channel_cfg = {
 static enum adc_action adc_callback(const struct device *dev,
                                     const struct adc_sequence *sequence,
 									uint16_t index) {
-	// printk("adc sample at: %d\n", k_cyc_to_us_near32(k_cycle_get_32()));
-	// printk("ADC raw value: ");
-	// for (int i = 0; i < BUFFER_SIZE; i++) {
-	// 	printk("%d ", sampling_buffer[i]);
-	// }
-	// printk("\n");
-	adc_data_update(sampling_buffer[0], sampling_buffer[1]);
+	printk("adc sample at: %d\n", k_cyc_to_us_near32(k_cycle_get_32()));
+	printk("ADC raw value: ");
+	for (int i = 0; i < BUFFER_SIZE; i++) {
+		printk("%d ", sampling_buffer[i]);
+	}
+	printk("\n");
+	adc_data_update(sampling_buffer[0], sampling_buffer[1], sampling_buffer[2],
+	                sampling_buffer[3], sampling_buffer[4], sampling_buffer[5]);
 
 	return ADC_ACTION_REPEAT;
 }
