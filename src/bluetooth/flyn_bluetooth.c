@@ -25,8 +25,6 @@ static int bt_ready() {
 	int err;
 
 	printk("Bluetooth initialized\n");
-
-	if (IS_ENABLED(CONFIG_SETTINGS)) settings_load();
 	
 	err = bt_le_adv_start(BT_LE_ADV_CONN_NAME, ad, ARRAY_SIZE(ad), sd, 0);
 	if (err) {
