@@ -9,7 +9,6 @@
 
 #include "flyn_bluetooth.h"
 #include "adc_service.h"
-#include "mpu6050_service.h"
 
 /* bt ready */
 
@@ -19,8 +18,7 @@ static const struct bt_data ad[] = {
 
 static const struct bt_data sd[] = {
 	BT_DATA_BYTES(BT_DATA_UUID16_ALL),
-	BT_DATA_BYTES(BT_DATA_UUID128_ALL, ADC_SERVICE_UUID_VAL),
-    BT_DATA_BYTES(BT_DATA_UUID128_ALL, IMU_SERVICE_UUID_VAL)
+	BT_DATA_BYTES(BT_DATA_UUID128_ALL, ADC_SERVICE_UUID_VAL)
 };
 
 static int bt_ready() {
