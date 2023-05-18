@@ -33,7 +33,7 @@ BT_GATT_SERVICE_DEFINE(adc_service,
 uint32_t prev_us_time = 0;
 
 uint16_t encode(struct k_queue* queue) {
-    uint16_t amount = adc_queue_pop_amount(queue, raw_array, DATA_AMOUNT_PER_PACKAGE);
+    uint16_t amount = foot_pressure_queue_pop_amount(queue, raw_array, DATA_AMOUNT_PER_PACKAGE);
     printk("Amount: %d\n", amount);
     // calculate buffer size 
     // package_number(1 byte) | list_size(1 byte) | data...(x) | check_sum(1 byte)
