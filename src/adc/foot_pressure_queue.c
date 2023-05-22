@@ -4,26 +4,26 @@
 
 #include "foot_pressure_queue.h"
 
-#define QUEUE_BLOCK_SIZE 8
+#define QUEUE_BLOCK_SIZE 16
 #define QUEUE_BLOCK_COUNT 1024
 
 K_MEM_SLAB_DEFINE(queue_slab, QUEUE_BLOCK_SIZE, QUEUE_BLOCK_COUNT, sizeof(void *));
 
 void foot_pressure_queue_push(struct k_queue *queue, foot_pressure_data_t data) {
     data_node_t *node;
-    if (!k_mem_slab_alloc(&queue_slab, &node, K_NO_WAIT)) {
-        node->data.value[0] = data.value[0];
-        node->data.value[1] = data.value[1];
-        node->data.value[2] = data.value[2];
-        node->data.value[3] = data.value[3];
-        node->data.value[4] = data.value[4];
-        node->data.value[5] = data.value[5];
+    if (!k_mem_slab_alloc(&queue_slab, (void**) &node, K_NO_WAIT)) {
+        node->ha = data.value[0];
+        node->lt = data.value[1];
+        node->m1 = data.value[2];
+        node->m5 = data.value[3];
+        node->arch = data.value[4];
+        node->hm = data.value[5];
     }
     else {
         printk("Memory allocation fail\n");
         return;
     }
-    k_queue_append(queue, (void *) node);
+    k_queue_append(queue, (void*) node);
 }
 
 uint16_t foot_pressure_queue_pop_amount(struct k_queue *queue, foot_pressure_data_t *array, uint16_t amount) {
@@ -32,8 +32,15 @@ uint16_t foot_pressure_queue_pop_amount(struct k_queue *queue, foot_pressure_dat
     for (int i = 0; i < amount; i++) {
         if (k_queue_is_empty(queue)) break;
         node = k_queue_get(queue, K_NO_WAIT);
-        array[i] = node->data;
-        k_mem_slab_free(&queue_slab, &node);
+
+        array[i].value[0] = node->ha;
+        array[i].value[1] = node->lt;
+        array[i].value[2] = node->m1;
+        array[i].value[3] = node->m5;
+        array[i].value[4] = node->arch;
+        array[i].value[5] = node->hm;
+
+        k_mem_slab_free(&queue_slab, (void**) &node);
         pop_amount++;
     }
     return pop_amount;
@@ -43,6 +50,6 @@ void foot_pressure_queue_clean(struct k_queue *queue) {
     data_node_t *node;
     while (!k_queue_is_empty(queue)) {
         node = k_queue_get(queue, K_NO_WAIT);
-        k_mem_slab_free(&queue_slab, &node);
+        k_mem_slab_free(&queue_slab, (void**) &node);
     }
 }

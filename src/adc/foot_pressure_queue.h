@@ -6,10 +6,8 @@ typedef struct foot_pressure_data {
 } foot_pressure_data_t;
 
 typedef struct data_node {
-
     sys_snode_t snode;
-    foot_pressure_data_t data;
-
+    int16_t ha, lt, m1, m5, arch, hm;
 } data_node_t;
 
 void foot_pressure_queue_push(struct k_queue*, foot_pressure_data_t);

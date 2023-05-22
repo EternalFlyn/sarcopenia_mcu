@@ -5,7 +5,8 @@
 #include "adc_service.h"
 #include "foot_pressure_queue.h"
 
-#define DATA_AMOUNT_PER_PACKAGE 25
+#define DATA_AMOUNT_PER_PACKAGE 5
+#define DATA_BYTE_SIZE 6 * 12 / 8 // 6 adc data per sampling, 12 bits per adc data, 8 bits = 1 byte
 
 K_QUEUE_DEFINE(FOOT_PRESSURE_QUEUE);
 
@@ -38,11 +39,10 @@ uint16_t encode(struct k_queue* queue) {
     // calculate buffer size 
     // package_number(1 byte) | list_size(1 byte) | data...(x) | check_sum(1 byte)
     uint16_t buffer_len = 3;
-    buffer_len += amount * 12 / 8;
-    if (amount % 2) buffer_len++;
+    buffer_len += amount * DATA_BYTE_SIZE;
 
     // add data size to head
-    buffer[0] = package_num;
+    buffer[0] = package_num++;
     buffer[1] = amount;
 
     // put data into buffer
@@ -51,7 +51,7 @@ uint16_t encode(struct k_queue* queue) {
         for (int j = 0; j < 6; j++) {
             uint8_t hi_bit = (raw_array[i].value[j] >> 8) & 0x0F;
             uint8_t lo_bit = raw_array[i].value[j] & 0xFF;
-            if (i % 2) {
+            if (j % 2) {
                 buffer[loc] |= hi_bit;
                 buffer[loc + 2] = lo_bit;
                 loc += 3;
@@ -62,11 +62,21 @@ uint16_t encode(struct k_queue* queue) {
             }
         }
     }
+
+    // put check sum at last
+    uint8_t checksum_pos = buffer_len - 1;
+    buffer[checksum_pos] = 0;
+    
+    for (int i = 0; i < checksum_pos; i++) {
+        buffer[checksum_pos] += buffer[i];
+    }
+    return buffer_len;
 }
 
 void adc_raw_notify() {
     if (!notify_flag) return;
     uint16_t len = encode(&FOOT_PRESSURE_QUEUE);
+    printk("notify data length:%d\n", len);
     bt_gatt_notify(NULL, &adc_service.attrs[1], buffer, len);
 
     // measure notification time interval
@@ -79,7 +89,6 @@ void adc_data_update(int16_t ha, int16_t lt, int16_t m1, int16_t m5, int16_t arc
     if (!notify_flag) return;
 
     sampling_count++;
-
     foot_pressure_data_t data = {
         .value = {ha, lt, m1, m5, arch, hm}
     };
