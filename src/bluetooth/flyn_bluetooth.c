@@ -49,7 +49,6 @@ static int bt_ready() {
 		.secondary_max_skip = 0,
 		.options = (BT_LE_ADV_OPT_CONNECTABLE |
 			    BT_LE_ADV_OPT_USE_NAME |
-			    BT_LE_ADV_OPT_ONE_TIME |
 				BT_LE_ADV_OPT_USE_IDENTITY),
 		.interval_min = 0x00a0, /* 100 ms */
 		.interval_max = 0x00f0, /* 150 ms */
