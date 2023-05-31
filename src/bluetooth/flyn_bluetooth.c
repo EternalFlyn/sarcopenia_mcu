@@ -85,6 +85,7 @@ static void connected(struct bt_conn *conn, uint8_t error) {
 
 static void disconnected(struct bt_conn *conn, uint8_t reason) {
 	printk("Disconnected, reason:%d\n", reason);
+	if (reason == 19) enable_recording(false);
 }
 
 static struct bt_conn_cb conn_callbacks = { 

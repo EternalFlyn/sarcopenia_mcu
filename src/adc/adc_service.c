@@ -13,16 +13,18 @@ K_QUEUE_DEFINE(FOOT_PRESSURE_QUEUE);
 static struct bt_uuid_128 adc_uuid = BT_UUID_INIT_128(ADC_SERVICE_UUID_VAL);
 static struct bt_uuid_128 foot_pressure_uuid = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xD16F7A3D, 0x1897, 0x40EA, 0x9629, 0xBDF749AC5991));
 
-static uint8_t notify_flag;
+static bool is_enable_recording = false;
+static bool notify_flag = false;
 
 static uint8_t package_num = 0;
 static uint8_t sampling_count = 0;
 
-static foot_pressure_data_t raw_array[DATA_AMOUNT_PER_PACKAGE];
+static foot_pressure_data_t raw_array[25];
 static uint8_t buffer[247];
 
 static void foot_pressure_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value) {
-	notify_flag = (value == BT_GATT_CCC_NOTIFY) ? 1 : 0;
+	notify_flag = (value == BT_GATT_CCC_NOTIFY) ? true : false;
+    if (notify_flag) is_enable_recording = true;
 }
 
 BT_GATT_SERVICE_DEFINE(adc_service,
@@ -34,7 +36,8 @@ BT_GATT_SERVICE_DEFINE(adc_service,
 uint32_t prev_us_time = 0;
 
 uint16_t encode(struct k_queue* queue) {
-    uint16_t amount = foot_pressure_queue_pop_amount(queue, raw_array, DATA_AMOUNT_PER_PACKAGE);
+    uint8_t count = sampling_count > 25 ? 25 : sampling_count;
+    uint16_t amount = foot_pressure_queue_pop_amount(queue, raw_array, count);
     printk("Amount: %d\n", amount);
     // calculate buffer size 
     // package_number(1 byte) | list_size(1 byte) | data...(x) | check_sum(1 byte)
@@ -74,7 +77,6 @@ uint16_t encode(struct k_queue* queue) {
 }
 
 void adc_raw_notify() {
-    if (!notify_flag) return;
     uint16_t len = encode(&FOOT_PRESSURE_QUEUE);
     printk("notify data length:%d\n", len);
     bt_gatt_notify(NULL, &adc_service.attrs[1], buffer, len);
@@ -85,17 +87,22 @@ void adc_raw_notify() {
     prev_us_time = time;
 }
 
-void adc_data_update(int16_t ha, int16_t lt, int16_t m1, int16_t m5, int16_t arch, int16_t hm) {
-    if (!notify_flag) return;
+void enable_recording(bool enable) {
+    is_enable_recording = enable;
+    if (!enable) foot_pressure_queue_clean(&FOOT_PRESSURE_QUEUE);
+}
 
+void adc_data_update(int16_t ha, int16_t lt, int16_t m1, int16_t m5, int16_t arch, int16_t hm) {
+    if (!is_enable_recording) return;
     sampling_count++;
     foot_pressure_data_t data = {
         .value = {ha, lt, m1, m5, arch, hm}
     };
     foot_pressure_queue_push(&FOOT_PRESSURE_QUEUE, data);
     
-    if (sampling_count == DATA_AMOUNT_PER_PACKAGE) {
+    if (!notify_flag) return;
+    if (sampling_count >= DATA_AMOUNT_PER_PACKAGE) {
         adc_raw_notify();
-        sampling_count = 0;
+        sampling_count -= DATA_AMOUNT_PER_PACKAGE;
     }
 }
