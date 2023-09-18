@@ -14,10 +14,14 @@ static struct bt_uuid_128 adc_uuid = BT_UUID_INIT_128(ADC_SERVICE_UUID_VAL);
 static struct bt_uuid_128 foot_pressure_uuid = BT_UUID_INIT_128(BT_UUID_128_ENCODE(0xD16F7A3D, 0x1897, 0x40EA, 0x9629, 0xBDF749AC5991));
 
 static bool is_enable_recording = false;
+static bool is_mtu_setup = false;
 static bool notify_flag = false;
 
 static uint8_t package_num = 0;
 static uint8_t sampling_count = 0;
+
+// for debug
+static int package_count = 0;
 
 static foot_pressure_data_t raw_array[25];
 static uint8_t buffer[247];
@@ -38,7 +42,8 @@ uint32_t prev_us_time = 0;
 uint16_t encode(struct k_queue* queue) {
     uint8_t count = sampling_count > 25 ? 25 : sampling_count;
     uint16_t amount = foot_pressure_queue_pop_amount(queue, raw_array, count);
-    printk("Amount: %d\n", amount);
+    sampling_count -= amount;
+    // printk("Amount: %d\n", amount);
     // calculate buffer size 
     // package_number(1 byte) | list_size(1 byte) | data...(x) | check_sum(1 byte)
     uint16_t buffer_len = 3;
@@ -47,11 +52,13 @@ uint16_t encode(struct k_queue* queue) {
     // add data size to head
     buffer[0] = package_num++;
     buffer[1] = amount;
-
+	
     // put data into buffer
     uint16_t loc = 2;
     for (int i = 0; i < amount; i++) {
+        printk("ADC raw value: ");
         for (int j = 0; j < 6; j++) {
+            printk("%d ", raw_array[i].value[j]);
             uint8_t hi_bit = (raw_array[i].value[j] >> 8) & 0x0F;
             uint8_t lo_bit = raw_array[i].value[j] & 0xFF;
             if (j % 2) {
@@ -64,6 +71,7 @@ uint16_t encode(struct k_queue* queue) {
                 buffer[loc + 1] = lo_bit;
             }
         }
+        printk("\n");
     }
 
     // put check sum at last
@@ -78,18 +86,28 @@ uint16_t encode(struct k_queue* queue) {
 
 void adc_raw_notify() {
     uint16_t len = encode(&FOOT_PRESSURE_QUEUE);
-    printk("notify data length:%d\n", len);
+    // printk("notify data length:%d\n", len);
     bt_gatt_notify(NULL, &adc_service.attrs[1], buffer, len);
+    package_count++;
+    printk("package count: %d\n", package_count);
 
     // measure notification time interval
     uint32_t time = k_cyc_to_us_near32(k_cycle_get_32());
-    printk("notify interval (us): %d\n", time - prev_us_time);
+    // printk("notify interval (us): %d\n", time - prev_us_time);
     prev_us_time = time;
 }
 
 void enable_recording(bool enable) {
     is_enable_recording = enable;
-    if (!enable) foot_pressure_queue_clean(&FOOT_PRESSURE_QUEUE);
+    if (!enable) {
+        package_count = 0;
+        sampling_count = 0;
+        foot_pressure_queue_clean(&FOOT_PRESSURE_QUEUE);
+    }
+}
+
+void mtu_is_setup(bool enable) {
+    is_mtu_setup = enable;
 }
 
 void adc_data_update(int16_t ha, int16_t lt, int16_t m1, int16_t m5, int16_t arch, int16_t hm) {
@@ -100,9 +118,8 @@ void adc_data_update(int16_t ha, int16_t lt, int16_t m1, int16_t m5, int16_t arc
     };
     foot_pressure_queue_push(&FOOT_PRESSURE_QUEUE, data);
     
-    if (!notify_flag) return;
+    if (!notify_flag || !is_mtu_setup) return;
     if (sampling_count >= DATA_AMOUNT_PER_PACKAGE) {
         adc_raw_notify();
-        sampling_count -= DATA_AMOUNT_PER_PACKAGE;
     }
 }

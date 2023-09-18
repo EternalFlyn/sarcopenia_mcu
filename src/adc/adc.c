@@ -14,9 +14,9 @@
 #define EXTRA_SAMPLING 0
 #define CHANNEL_AMOUNT 6
 #define BUFFER_SIZE CHANNEL_AMOUNT*(1+EXTRA_SAMPLING)
-#define ADC_GAIN ADC_GAIN_1_6
-#define ADC_REFERENCE ADC_REF_INTERNAL
-#define ADC_ACQUISITION_TIME ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 10)
+#define ADC_GAIN ADC_GAIN_1_4
+#define ADC_REFERENCE ADC_REF_VDD_1_4
+#define ADC_ACQUISITION_TIME ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 40)
 #define ADC_RESOLUTION 12
 
 //定義channel0~5之AIN腳位
@@ -28,13 +28,13 @@
 #define ADC_2ND_CHANNEL_ID 1
 #define ADC_2ND_CHANNEL_INPUT NRF_SAADC_INPUT_AIN1
 #define ADC_3RD_CHANNEL_ID 2
-#define ADC_3RD_CHANNEL_INPUT NRF_SAADC_INPUT_AIN4
+#define ADC_3RD_CHANNEL_INPUT NRF_SAADC_INPUT_AIN2
 #define ADC_4TH_CHANNEL_ID 3
-#define ADC_4TH_CHANNEL_INPUT NRF_SAADC_INPUT_AIN5
+#define ADC_4TH_CHANNEL_INPUT NRF_SAADC_INPUT_AIN3
 #define ADC_5TH_CHANNEL_ID 4
-#define ADC_5TH_CHANNEL_INPUT NRF_SAADC_INPUT_AIN6
+#define ADC_5TH_CHANNEL_INPUT NRF_SAADC_INPUT_AIN4
 #define ADC_6TH_CHANNEL_ID 5
-#define ADC_6TH_CHANNEL_INPUT NRF_SAADC_INPUT_AIN7
+#define ADC_6TH_CHANNEL_INPUT NRF_SAADC_INPUT_AIN5
 
 static int16_t sampling_buffer[BUFFER_SIZE];
 
@@ -101,12 +101,15 @@ static const struct adc_channel_cfg adc6_channel_cfg = {
 static enum adc_action adc_callback(const struct device *dev,
                                     const struct adc_sequence *sequence,
 									uint16_t index) {
-	printk("adc sample at: %d\n", k_cyc_to_us_near32(k_cycle_get_32()));
-	printk("ADC raw value: ");
-	for (int i = 0; i < BUFFER_SIZE; i++) {
-		printk("%d ", sampling_buffer[i]);
+	// printk("adc sample at: %d\n", k_cyc_to_us_near32(k_cycle_get_32()));
+	// printk("ADC raw value: ");
+	// for (int i = 0; i < BUFFER_SIZE; i++) {
+	// 	printk("%d ", sampling_buffer[i]);
+	// }
+	// printk("\n");
+	for (int i = 0; i < 6; i++) {
+		if (sampling_buffer[i] < 0) sampling_buffer[i] = 0;
 	}
-	printk("\n");
 	adc_data_update(sampling_buffer[0], sampling_buffer[1], sampling_buffer[2],
 	                sampling_buffer[3], sampling_buffer[4], sampling_buffer[5]);
 

@@ -73,8 +73,8 @@ static int bt_ready() {
 
 static struct bt_le_conn_param conn_param = {
 	// 15 ms to 15 ms
-	.interval_min = 6,
-	.interval_max = 6,
+	.interval_min = 18,
+	.interval_max = 24,
 	.timeout = 30
 };
 
@@ -98,6 +98,12 @@ static struct bt_conn_cb conn_callbacks = {
 
 static void mtu_updated(struct bt_conn *conn, uint16_t tx, uint16_t rx) {
 	printk("Updated MTU: TX: %d RX: %d bytes\n", tx, rx);
+	if (tx == 236 && rx == 236) {
+		mtu_is_setup(true);
+	}
+	else {
+		mtu_is_setup(false);
+	}
 }
 
 static struct bt_gatt_cb gatt_callbacks = {

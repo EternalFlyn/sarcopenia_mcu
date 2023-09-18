@@ -9,9 +9,18 @@
 
 K_MEM_SLAB_DEFINE(queue_slab, QUEUE_BLOCK_SIZE, QUEUE_BLOCK_COUNT, sizeof(void *));
 
+static uint16_t slab_data_count = 0;
+
 void foot_pressure_queue_push(struct k_queue *queue, foot_pressure_data_t data) {
     data_node_t *node;
-    if (!k_mem_slab_alloc(&queue_slab, (void**) &node, K_NO_WAIT)) {
+    if (slab_data_count >= QUEUE_BLOCK_COUNT) {
+        // printk("block the data\n");
+        return;
+    }
+    if (
+        // slab_data_count < QUEUE_BLOCK_COUNT ||
+        !k_mem_slab_alloc(&queue_slab, (void**) &node, K_NO_WAIT)
+    ) {
         node->ha = data.value[0];
         node->lt = data.value[1];
         node->m1 = data.value[2];
@@ -24,6 +33,7 @@ void foot_pressure_queue_push(struct k_queue *queue, foot_pressure_data_t data) 
         return;
     }
     k_queue_append(queue, (void*) node);
+    slab_data_count++;
 }
 
 uint16_t foot_pressure_queue_pop_amount(struct k_queue *queue, foot_pressure_data_t *array, uint16_t amount) {
@@ -43,6 +53,7 @@ uint16_t foot_pressure_queue_pop_amount(struct k_queue *queue, foot_pressure_dat
         k_mem_slab_free(&queue_slab, (void**) &node);
         pop_amount++;
     }
+    slab_data_count -= pop_amount;
     return pop_amount;
 }
 
@@ -52,4 +63,5 @@ void foot_pressure_queue_clean(struct k_queue *queue) {
         node = k_queue_get(queue, K_NO_WAIT);
         k_mem_slab_free(&queue_slab, (void**) &node);
     }
+    slab_data_count = 0;
 }

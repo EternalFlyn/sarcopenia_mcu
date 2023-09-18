@@ -31,9 +31,5 @@ void main(void) {
 
 	if (bt_init()) return;
 
-	gpio0_dev =  device_get_binding("GPIO_0");
-	gpio_pin_configure(gpio0_dev, 30, GPIO_OUTPUT);
-	gpio_pin_set(gpio0_dev, 30, 1);
-
 	adc_sample(adc_dev);
 }
