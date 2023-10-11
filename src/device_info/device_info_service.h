@@ -3,6 +3,6 @@
 
 #define DEVICE_INFO_SERVICE_UUID_VAL BT_UUID_128_ENCODE(0x58C4FFA1, 0x1548, 0x44D5, 0x9972, 0xF7C25BECB620)
 
-void device_info_updata(int16_t);
+void battery_data_updata(int16_t);
 
 #endif

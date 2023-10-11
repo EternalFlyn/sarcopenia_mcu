@@ -18,7 +18,7 @@ BT_GATT_SERVICE_DEFINE(device_info_service,
     BT_GATT_CHARACTERISTIC(&battery_uuid.uuid, BT_GATT_CHRC_READ, BT_GATT_PERM_READ, read_battery, NULL, battery_data)
 );
 
-void device_info_updata(int16_t battery) {
+void battery_data_updata(int16_t battery) {
     for (int i = 0; i < 4; i++) {
         battery_data[i] = battery >> (i * 8) & 0xFF;
     }

@@ -8,6 +8,7 @@
 
 #include "adc.h"
 #include "adc_service.h"
+#include "device_info_service.h"
 
 #define ADC_SAMPLE_TIME_US 10*1000 // 100Hz
 
@@ -35,8 +36,11 @@
 #define ADC_5TH_CHANNEL_INPUT NRF_SAADC_INPUT_AIN4
 #define ADC_6TH_CHANNEL_ID 5
 #define ADC_6TH_CHANNEL_INPUT NRF_SAADC_INPUT_AIN5
+#define ADC_7TH_CHANNEL_ID 6
+#define ADC_7TH_CHANNEL_INPUT NRF_SAADC_INPUT_AIN6
 
 static int16_t sampling_buffer[BUFFER_SIZE];
+static int16_t battery_buffer[1];
 
 static const struct adc_channel_cfg adc1_channel_cfg = {
 	.gain = ADC_GAIN,
@@ -98,20 +102,31 @@ static const struct adc_channel_cfg adc6_channel_cfg = {
 #endif
 };
 
+static const struct adc_channel_cfg adc7_channel_cfg = {
+	.gain = ADC_GAIN,
+	.reference = ADC_REFERENCE,
+	.acquisition_time = ADC_ACQUISITION_TIME,
+	.channel_id = ADC_7TH_CHANNEL_ID,
+#if defined(CONFIG_ADC_CONFIGURABLE_INPUTS)
+	.input_positive = ADC_7TH_CHANNEL_INPUT,
+#endif
+};
+
 static enum adc_action adc_callback(const struct device *dev,
                                     const struct adc_sequence *sequence,
 									uint16_t index) {
-	// printk("adc sample at: %d\n", k_cyc_to_us_near32(k_cycle_get_32()));
-	// printk("ADC raw value: ");
-	// for (int i = 0; i < BUFFER_SIZE; i++) {
-	// 	printk("%d ", sampling_buffer[i]);
-	// }
-	// printk("\n");
-	for (int i = 0; i < 6; i++) {
+	printk("adc sample at: %d\n", k_cyc_to_us_near32(k_cycle_get_32()));
+	printk("ADC raw value: ");
+	for (int i = 0; i < BUFFER_SIZE; i++) {
+		printk("%d ", sampling_buffer[i]);
+	}
+	printk("\n");
+	for (int i = 0; i < 7; i++) {
 		if (sampling_buffer[i] < 0) sampling_buffer[i] = 0;
 	}
 	adc_data_update(sampling_buffer[0], sampling_buffer[1], sampling_buffer[2],
 	                sampling_buffer[3], sampling_buffer[4], sampling_buffer[5]);
+	battery_data_updata(sampling_buffer[6]);
 
 	return ADC_ACTION_REPEAT;
 }
@@ -119,6 +134,20 @@ static enum adc_action adc_callback(const struct device *dev,
 const struct adc_sequence_options sequence_opts = {
 	.interval_us = ADC_SAMPLE_TIME_US,
 	.callback = adc_callback,
+	.user_data = NULL,
+	.extra_samplings = EXTRA_SAMPLING,
+};
+
+static enum adc_action battery_callback(const struct device *dev,
+                                    const struct adc_sequence *sequence,
+									uint16_t index) {
+	battery_data_updata(battery_buffer[0]);
+	return ADC_ACTION_REPEAT;
+}
+
+const struct adc_sequence_options battery_sequence_opts = {
+	.interval_us = 1000 * 1000,
+	.callback = battery_callback,
 	.user_data = NULL,
 	.extra_samplings = EXTRA_SAMPLING,
 };
@@ -131,11 +160,12 @@ int adc_init(const struct device *dev) {
         return -1;
     }
 	ret = adc_channel_setup(dev, &adc1_channel_cfg);
-	ret = adc_channel_setup(dev, &adc2_channel_cfg);
-	ret = adc_channel_setup(dev, &adc3_channel_cfg);
-	ret = adc_channel_setup(dev, &adc4_channel_cfg);
-	ret = adc_channel_setup(dev, &adc5_channel_cfg);
-	ret = adc_channel_setup(dev, &adc6_channel_cfg);
+	ret &= adc_channel_setup(dev, &adc2_channel_cfg);
+	ret &= adc_channel_setup(dev, &adc3_channel_cfg);
+	ret &= adc_channel_setup(dev, &adc4_channel_cfg);
+	ret &= adc_channel_setup(dev, &adc5_channel_cfg);
+	ret &= adc_channel_setup(dev, &adc6_channel_cfg);
+	ret &= adc_channel_setup(dev, &adc7_channel_cfg);
 	if (ret) {
 		printk("Error in adc setup: %d\n", ret);
         return ret;
@@ -170,6 +200,21 @@ int adc_sample(const struct device *dev) {
 	ret = adc_read(dev, &sequence);
 
     if (ret) {
+        printk("ADC read err: %d\n", ret);
+        return ret;
+    }
+
+	const struct adc_sequence battery = {
+		.options = &battery_sequence_opts,
+		.channels = BIT(ADC_7TH_CHANNEL_ID),
+		.buffer = battery_buffer,
+		.buffer_size = sizeof(battery_buffer),
+		.resolution = ADC_RESOLUTION,
+	};
+
+	ret = adc_read(dev, &battery);
+
+	if (ret) {
         printk("ADC read err: %d\n", ret);
         return ret;
     }
