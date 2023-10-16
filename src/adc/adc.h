@@ -4,6 +4,7 @@
 #include <device.h>
 
 int adc_init(const struct device *);
-int adc_sample(const struct device *);
+int start_adc_sample();
+void stop_adc_sample();
 
 #endif

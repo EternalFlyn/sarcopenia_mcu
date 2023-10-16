@@ -12,7 +12,7 @@
 
 #include "flyn_bluetooth.h"
 #include "adc.h"
-#include "adc_service.h"
+#include "battery.h"
 
 #define ADC_DEVICE_NAME DT_LABEL(DT_INST(0, nordic_nrf_saadc))
 
@@ -20,7 +20,6 @@
 #define THREAD_PRIORITY 5
 
 const struct device *adc_dev;
-const struct device *gpio0_dev;
 
 void main(void) {
 	printk("Hello World! %s\n", CONFIG_BOARD);
@@ -28,8 +27,9 @@ void main(void) {
 	// ADC setup
     adc_dev = device_get_binding(ADC_DEVICE_NAME);
 	if (adc_init(adc_dev)) return;
-
+	if (battery_init(adc_dev)) return;
 	if (bt_init()) return;
 
-	adc_sample(adc_dev);
+	if (start_battery_sample()) return;
+	if (start_adc_sample()) return;
 }
