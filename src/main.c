@@ -31,5 +31,4 @@ void main(void) {
 	if (bt_init()) return;
 
 	if (start_battery_sample()) return;
-	if (start_adc_sample()) return;
 }

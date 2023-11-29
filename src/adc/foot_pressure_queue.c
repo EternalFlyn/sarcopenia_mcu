@@ -11,11 +11,11 @@ K_MEM_SLAB_DEFINE(queue_slab, QUEUE_BLOCK_SIZE, QUEUE_BLOCK_COUNT, sizeof(void *
 
 static uint16_t slab_data_count = 0;
 
-void foot_pressure_queue_push(struct k_queue *queue, foot_pressure_data_t data) {
+bool foot_pressure_queue_push(struct k_queue *queue, foot_pressure_data_t data) {
     data_node_t *node;
     if (slab_data_count >= QUEUE_BLOCK_COUNT) {
-        // printk("block the data\n");
-        return;
+        printk("block the data\n");
+        return false;
     }
     if (
         // slab_data_count < QUEUE_BLOCK_COUNT ||
@@ -30,10 +30,11 @@ void foot_pressure_queue_push(struct k_queue *queue, foot_pressure_data_t data) 
     }
     else {
         printk("Memory allocation fail\n");
-        return;
+        return false;
     }
     k_queue_append(queue, (void*) node);
     slab_data_count++;
+    return true;
 }
 
 uint16_t foot_pressure_queue_pop_amount(struct k_queue *queue, foot_pressure_data_t *array, uint16_t amount) {

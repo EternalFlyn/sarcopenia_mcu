@@ -57,8 +57,6 @@ static int bt_ready() {
 		.peer = NULL,
 	};
 
-	// adv_param.id = set_bt_addr("E0:00:49:00:00:02");
-
 	printk("Bluetooth initialized\n");
 	
 	err = bt_le_adv_start(&adv_param, ad, ARRAY_SIZE(ad), sd, 0);
@@ -73,26 +71,36 @@ static int bt_ready() {
 
 /* connect callback */
 
-static struct bt_le_conn_param conn_param = {
-	// 15 ms to 15 ms
-	.interval_min = 18,
-	.interval_max = 24,
-	.timeout = 30
-};
-
 static void connected(struct bt_conn *conn, uint8_t error) {
 	printk("Connected\n");
-	bt_conn_le_param_update(conn, &conn_param);
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason) {
 	printk("Disconnected, reason:%d\n", reason);
+	device_connected(false);
 	if (reason == 19) enable_recording(false);
+}
+
+static struct bt_le_conn_param conn_param = {
+	// interval = 30 ms to 45 ms (interval x1.25)
+	// timeout = 3000 ms (timeout x10)
+	.interval_min = 24,
+	.interval_max = 36,
+	.latency = 5,
+	.timeout = 300
+};
+
+static void le_param_updated(struct bt_conn *conn, uint16_t interval, uint16_t latency, uint16_t timeout) {
+	if (interval != conn_param.interval_max && timeout != conn_param.timeout) {
+		bt_conn_le_param_update(conn, &conn_param);
+	}
+	printk("parameter_updated: interval:%d, latency:%d, timeout:%d\n", interval, latency, timeout);
 }
 
 static struct bt_conn_cb conn_callbacks = { 
 	.connected = connected,
-	.disconnected = disconnected
+	.disconnected = disconnected,
+	.le_param_updated = le_param_updated
 };
 
 /* gatt callback */
@@ -100,12 +108,7 @@ static struct bt_conn_cb conn_callbacks = {
 
 static void mtu_updated(struct bt_conn *conn, uint16_t tx, uint16_t rx) {
 	printk("Updated MTU: TX: %d RX: %d bytes\n", tx, rx);
-	if (tx == 236 && rx == 236) {
-		mtu_is_setup(true);
-	}
-	else {
-		mtu_is_setup(false);
-	}
+	if (tx == 236 && rx == 236) device_connected(true);
 }
 
 static struct bt_gatt_cb gatt_callbacks = {

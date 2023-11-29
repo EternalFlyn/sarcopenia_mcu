@@ -10,7 +10,7 @@ typedef struct data_node {
     int16_t ha, lt, m1, m5, arch, hm;
 } data_node_t;
 
-void foot_pressure_queue_push(struct k_queue*, foot_pressure_data_t);
+bool foot_pressure_queue_push(struct k_queue*, foot_pressure_data_t);
 uint16_t foot_pressure_queue_pop_amount(struct k_queue*, foot_pressure_data_t*, uint16_t);
 void foot_pressure_queue_clean(struct k_queue*);
 
