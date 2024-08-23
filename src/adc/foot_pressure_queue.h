@@ -2,11 +2,13 @@
 #define FLYN_FOOT_PRESSURE_QUEUE
 
 typedef struct foot_pressure_data {
+    uint16_t time;
     int16_t value[6];
 } foot_pressure_data_t;
 
 typedef struct data_node {
     sys_snode_t snode;
+    uint16_t time;
     int16_t ha, lt, m1, m5, arch, hm;
 } data_node_t;
 

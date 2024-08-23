@@ -6,7 +6,7 @@
 #include "foot_pressure_queue.h"
 #include "adc.h"
 
-#define DATA_AMOUNT_PER_PACKAGE 20
+#define DATA_AMOUNT_PER_PACKAGE 5
 #define DATA_BYTE_SIZE 6 * 12 / 8 // 6 adc data per sampling, 12 bits per adc data, 8 bits = 1 byte
 #define NOTIFY_THREAD_AMOUNT 10
 
@@ -48,16 +48,18 @@ uint16_t encode(struct k_queue* queue) {
     sampling_count -= amount;
     // printk("Amount: %d\n", amount);
     // calculate buffer size 
-    // package_number(1 byte) | list_size(1 byte) | data...(x) | check_sum(1 byte)
-    uint16_t buffer_len = 3;
+    // package_number(1 byte) | list_size(1 byte) | time of fist sample (2 bytes) | data...(x) | check_sum(1 byte)
+    uint16_t buffer_len = 5;
     buffer_len += amount * DATA_BYTE_SIZE;
 
     // add data size to head
     buffer[0] = package_num++;
     buffer[1] = amount;
+    buffer[2] = (raw_array[0].time >> 8) & 0xFF;
+    buffer[3] = raw_array[0].time & 0xFF;
 	
     // put data into buffer
-    uint16_t loc = 2;
+    uint16_t loc = 4;
     for (int i = 0; i < amount; i++) {
         // printk("ADC raw value: ");
         for (int j = 0; j < 6; j++) {
@@ -93,17 +95,17 @@ void notify_complete_callback(struct bt_conn *conn, void *user_data) {
 }
 
 void adc_raw_notify() {
-    k_sem_give(&notify_sem);
+    // k_sem_give(&notify_sem);
     uint16_t len = encode(&FOOT_PRESSURE_QUEUE);
     // printk("notify data length:%d\n", len);
-    // bt_gatt_notify(NULL, &adc_service.attrs[1], buffer, len);
-    struct bt_gatt_notify_params params = {
-        .attr = &adc_service.attrs[1],
-        .data = buffer,
-        .len = len,
-        .func = notify_complete_callback,
-    };
-    bt_gatt_notify_cb(NULL, &params);
+    bt_gatt_notify(NULL, &adc_service.attrs[1], buffer, len);
+    // struct bt_gatt_notify_params params = {
+    //     .attr = &adc_service.attrs[1],
+    //     .data = buffer,
+    //     .len = len,
+    //     .func = notify_complete_callback,
+    // };
+    // bt_gatt_notify_cb(NULL, &params);
     package_count++;
     printk("package count: %d\n", package_count);
 
@@ -133,6 +135,7 @@ void device_connected(bool status) {
 void adc_data_update(int16_t ha, int16_t lt, int16_t m1, int16_t m5, int16_t arch, int16_t hm) {
     sampling_count++;
     foot_pressure_data_t data = {
+        .time = (uint16_t) (k_cyc_to_ms_near32(k_cycle_get_32()) & 0xFFFF),
         .value = {ha, lt, m1, m5, arch, hm}
     };
     foot_pressure_queue_push(&FOOT_PRESSURE_QUEUE, data);

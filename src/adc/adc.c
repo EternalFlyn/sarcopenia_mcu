@@ -5,14 +5,6 @@
 #include "adc.h"
 #include "adc_service.h"
 
-#define ADC_SAMPLE_TIME_MS 10 // 100Hz
-
-#define CHANNEL_AMOUNT 6
-#define ADC_GAIN ADC_GAIN_1_4
-#define ADC_REFERENCE ADC_REF_VDD_1_4
-#define ADC_ACQUISITION_TIME ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 40)
-#define ADC_RESOLUTION 12
-
 //定義channel0~5之AIN腳位
 //Sparkfun nrf52840 mini 使用 A0、A1、A7、A6、A5、A4
 //nrf52840DK 使用 A1、A2、A4、A5、A6、A7
@@ -93,21 +85,39 @@ static const struct adc_channel_cfg adc6_channel_cfg = {
 #endif
 };
 
+static int16_t sg_buffer[6] = {0, 0, 0, 0, 0, 0};
+static int16_t sg_plus[6] = {1, 2, 4, 8, 16, 32};
+
+static void sg() {
+	for (int i = 0; i < 6; i++) {
+		int16_t cond = sg_buffer[i] + sg_plus[i];
+		if (cond > 4095 || cond < 0) sg_plus[i] *= -1;
+		sg_buffer[i] += sg_plus[i];
+	}
+	adc_data_update(sg_buffer[0], sg_buffer[1], sg_buffer[2],
+					sg_buffer[3], sg_buffer[4], sg_buffer[5]);
+}
+
 static enum adc_action adc_callback(const struct device *dev,
                                     const struct adc_sequence *sequence,
 									uint16_t index) {
+	/* print sampling data */
 	// printk("adc sample at: %d\n", k_cyc_to_us_near32(k_cycle_get_32()));
 	// printk("ADC raw value: ");
 	// for (int i = 0; i < BUFFER_SIZE; i++) {
 	// 	printk("%d ", sampling_buffer[i]);
 	// }
 	// printk("\n");
+
+	/* sampling */
 	for (int i = 0; i < 6; i++) {
 		if (sampling_buffer[i] < 0) sampling_buffer[i] = 0;
 	}
 	adc_data_update(sampling_buffer[0], sampling_buffer[1], sampling_buffer[2],
 	                sampling_buffer[3], sampling_buffer[4], sampling_buffer[5]);
 
+	/* signal generator (triangle wave) */
+	// sg();
 	return ADC_ACTION_CONTINUE;
 }
 

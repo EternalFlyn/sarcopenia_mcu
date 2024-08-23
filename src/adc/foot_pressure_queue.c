@@ -3,8 +3,9 @@
 #include <kernel.h>
 
 #include "foot_pressure_queue.h"
+#include "adc.h"
 
-#define QUEUE_BLOCK_SIZE 16
+#define QUEUE_BLOCK_SIZE 24
 #define QUEUE_BLOCK_COUNT 1024
 
 K_MEM_SLAB_DEFINE(queue_slab, QUEUE_BLOCK_SIZE, QUEUE_BLOCK_COUNT, sizeof(void *));
@@ -21,6 +22,7 @@ bool foot_pressure_queue_push(struct k_queue *queue, foot_pressure_data_t data) 
         // slab_data_count < QUEUE_BLOCK_COUNT ||
         !k_mem_slab_alloc(&queue_slab, (void**) &node, K_NO_WAIT)
     ) {
+        node->time = data.time;
         node->ha = data.value[0];
         node->lt = data.value[1];
         node->m1 = data.value[2];
@@ -39,11 +41,20 @@ bool foot_pressure_queue_push(struct k_queue *queue, foot_pressure_data_t data) 
 
 uint16_t foot_pressure_queue_pop_amount(struct k_queue *queue, foot_pressure_data_t *array, uint16_t amount) {
     uint16_t pop_amount = 0;
+    uint16_t prev_time = 0;
     data_node_t *node;
     for (int i = 0; i < amount; i++) {
         if (k_queue_is_empty(queue)) break;
+        // check the data interval
+        if (i != 0) {
+            data_node_t *temp = k_queue_peek_head(queue);
+            uint16_t interval = temp->time - prev_time;
+            if (interval < ADC_SAMPLE_TIME_MS - 1 || interval > ADC_SAMPLE_TIME_MS + 1) break;
+        }
         node = k_queue_get(queue, K_NO_WAIT);
+        prev_time = node->time;
 
+        array[i].time = node->time;
         array[i].value[0] = node->ha;
         array[i].value[1] = node->lt;
         array[i].value[2] = node->m1;
